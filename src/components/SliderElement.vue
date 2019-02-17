@@ -1,37 +1,62 @@
 <template>
-  <div class="hello">
-    <a href="#" @click="deleteElement()">x</a>
-
-    <div class="row">
-      <input type="text" v-model="title" placeholder="title"><br>
-      <input type="text" v-model="image_url" placeholder="Image URL"><br>
-      <input type="subtitle" v-model="subtitle" placeholder="subtitle"><br>
+  <div class="col-md-12" style="border: solid 1px;">
+    <div class="row" style="float:right;">
+      <span  @click="deleteElement()" style="cursor:pointer;margin-right:5px;"><v-icon name="trash"/></v-icon></span>  
     </div>
-    <div class="row">
-        <button @click="addButton()">Add Buttons</button>
-        <ul>
-          <li v-for="(button,index) in buttons" >
-            <div class="row">
-              <a href="#" @click="removeButton(index)">x</a>
-              <select v-model="button.type">
-                <option value="web_url">Web URL</option>
-                <option value="postback">PostBack</option>
-                <option value="phone_number">Phone</option>
-              </select> <br>
-              <span>
-                <input type="text" v-model='button.title' placeholder="title">
-                <br>              
-              </span>
-              <span v-show="button.type =='web_url'">
-                <input type="text" placeholder="url" v-model="button.url">
-                <br>              
-              </span>
-              <span v-show="button.type!='web_url'">
-                <input type="text" placeholder="payload" v-model="button.payload"><br>              
-              </span>
-            </div>
-          </li>
-        </ul>
+      <div class="col-md-12" style="padding:0;">
+        <FloatingLabel
+        :config="{label: 'Title'}">
+        <input name="elementtitle" type="text"  v-model="title">
+        </FloatingLabel>
+        <FloatingLabel
+        :config="{label: 'Image URL'}">
+        <input name="image_url" type="text"  v-model="image_url">
+        </FloatingLabel>
+        <FloatingLabel
+        :config="{label: 'Subtitle'}">
+        <input name="subtitle" type="text"  v-model="subtitle">
+        </FloatingLabel>
+      </div>
+      <div class="row" style="padding-top:15px;padding-bottom:15px;">
+      <div class="col-md-12" >
+          <ul style="padding:0;">
+            <li v-for="(button,index) in buttons" style="padding-top:15px;">
+              <div class="row" style="margin:5px;border: 1px solid;" >
+                <div class="col-md-12" style="text-align:center;" >
+                  <span  @click="removeButton(index)" style="cursor:pointer;float:right;"><v-icon name="trash"/></v-icon></span>  
+                </div>
+                <div class='col-md-12'>
+                  <select class="form-control" v-model="button.type">
+                    <option value="web_url">Web URL</option>
+                    <option value="postback">PostBack</option>
+                    <option value="phone_number">Phone</option>
+                  </select>
+                </div>
+                <span class="col-md-12">
+                  <FloatingLabel
+                  :config="{label: 'Title'}">
+                  <input name="buttontitle" type="text"  v-model="button.title">
+                  </FloatingLabel>
+                </span>
+                <span style="margin-bottom:5px;" v-show="button.type =='web_url'" class="col-md-12">
+                  <FloatingLabel
+                  :config="{label: 'Url'}">
+                  <input name="buttonurl" type="text"  v-model="button.url">
+                  </FloatingLabel>   
+                </span>
+                <span style="margin-bottom:5px;" v-show="button.type!='web_url'" class="col-md-12">
+                  <FloatingLabel
+                  :config="{label: 'Payload'}">
+                  <input name="buttonpayload" type="text"  v-model="button.payload">
+                  </FloatingLabel>
+                </span>
+              </div>
+            </li>
+          </ul>
+      </div>
+      <div class="col-md-12" style="padding-top:15px">
+        <button @click="addButton()" class="btn btn-dark" style="float:right;"><v-icon name="plus"/></v-icon> Add Buttons</button>
+      </div>
     </div>
 
 
@@ -40,6 +65,8 @@
 </template>
 
 <script>
+import FloatingLabel from 'vue-simple-floating-labels'
+
 export default {
   name: 'SliderElement',
   props:['slider_id','el_data'],
@@ -57,6 +84,9 @@ export default {
       }
     }
   },
+  components: {
+    FloatingLabel
+  },
   computed:
   {
     output(){
@@ -68,7 +98,7 @@ export default {
 
         handler:function(val)
         {
-          this.$parent.updateElement(this.slider_id,val);
+          this.$parent.$parent.$parent.updateElement(this.slider_id,val);
         },
         deep:true
        },
@@ -107,7 +137,7 @@ export default {
     },
     deleteElement()
     {
-      this.$parent.deleteElement(this.slider_id);
+      this.$parent.$parent.$parent.deleteElement(this.slider_id);
     },
     toString()
     {
@@ -138,5 +168,6 @@ a {
 .hello{
   border: solid 1px; 
 }
+
 
 </style>

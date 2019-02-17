@@ -1,62 +1,112 @@
 <template>
-  <div class="container">
-    <div class="row">
-        <select v-model='selected_template'>
-          <option value="text">Text</option>
-          <option value="slider">Slider</option>
-        </select>
+    <div class="container">
+        <form-wizard  shape="tab" color="#364e92" @on-validate="handleValidation">
+            <h2 slot="title">Broadcaster</h2> 
+            <tab-content title="Facebook Login" icon="ti-user" :before-change="checkIfUserHavePages">
+                <h1>Login To Facebook</h1>
+                <!-- set your public app Id her  -->
+                <facebook-login class="button" appId="" @login="getUserData" @logout="onLogout" @sdk-loaded="sdkLoaded">
+                </facebook-login>
+                <img v-if="!isConnected" :src="loginImage" class="login">
+                <div v-if="isConnected" class="information">
+                    <h1>My Facebook Information</h1>
+                    <div class="well">
+                        <div class="list-item">
+                            <img :src="loginImage">
+                            <i>{{name}}</i>
+                        </div>
+                        <div class="list-item">
+                            <img :src="mailImage">
+                            <i>{{email}}</i>
+                        </div>
+                        <div class="list-item">
+                            <img :src="faceImage">
+                            <i>{{personalID}}</i>
+                        </div>
+                        <div class="list-item">
+                            <ul>
+                                <li v-for="(page,key) in this.pages" >
+                                    <span>Page{{key+1}}-{{page.name}}</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </tab-content>
+            <tab-content title="Pages" icon="ti-settings" :before-change="checkIfSetPage">
+                <div class="col-md-12" style="margin-bottom: 10%;">
+                    <h1>Please choose One Of your Pages</h1>
+                    <select class="form-control" v-model="selected_page" placeholder="Activity zone">
+                        <option v-for="page in this.pages" :value="page.access_token">{{page.name}}</option>
+                    </select>
+                </div>
+            </tab-content>
+            <tab-content title=" Broadcast Message" icon="ti-check">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-md-12" style="text-align:-webkit-center;width: 50%;">
+                            <select class="form-control" style="width:50%"  v-model='selected_template'>
+                                <option value="text">Text</option>
+                                <option value="slider">Slider</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row" style="padding:5%;" v-show="selected_template == 'text'">
+                        <input type="text" placeholder="Enter your message Here" class="form-control" v-model="text_message">
+                    </div>
+                    <div class="row" v-show="selected_template == 'slider'">
+                        <div class="col-md-12" v-show="this.slider_result.length>0">
+                            <ul class="col-md-12" style="float:left;padding-top:2%">
+                                <li class="col-md-5" style="padding-top:2%;" v-for="(el,index) in this.slider_result" >
+                                  <SliderElement :el_data="el" :slider_id="index"></SliderElement>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-12"  v-show="this.slider_result.length < 7">
+                            <button @click="addElement()" style="float:right" class="btn btn-dark">Add Element</button>
+                        </div>
+                    </div>
+                </div>
+            </tab-content>
+            <button v-if="selected_template == 'text'" :disabled="!text_message" slot="finish" class="btn btn-success" @click="sendMessage()">Broadcast Message</button>
+            <button v-else :disabled="this.slider_result.length == 0" slot="finish" class="btn btn-success" @click="sendMessage()">Broadcast Message</button>
+        </form-wizard>
     </div>
-
-    <div class="row" v-show="selected_template == 'text'">
-      <input type="text" v-model="text_message">
-    </div>
-
-    <div class="row" v-show="selected_template == 'slider'">
-      <div class="row">
-          <button @click="addElement()">Add Element</button>
-      </div>
-
-      <div class="row" v-show="this.slider_result.length>0">
-        <ul>
-            <li v-for="(el,index) in this.slider_result" >
-
-              <SliderElement :el_data="el" :slider_id="index"></SliderElement>
-              
-            </li>
-        </ul>
-      </div>
-
-    </div>
-
-
-
-    <div class="row">
-      <textarea v-model="text_output">
-        
-      </textarea>      
-    </div>
-
-  </div>
 </template>
-
 <script>
 
 import SliderElement from './SliderElement.vue'
-
-
+import facebookLogin from 'facebook-login-vuejs';
+import idImage from '../../node_modules/facebook-login-vuejs/example/src/id.svg'
+import loginImage from '../../node_modules/facebook-login-vuejs/example/src/login.svg'
+import mailImage from '../../node_modules/facebook-login-vuejs/example/src/mail.svg'
+import Swal from 'sweetalert2/dist/sweetalert2.js'
+import faceImage from '../../node_modules/facebook-login-vuejs/example/src/face.svg'
 export default {
-  name: 'CreativeMessage',
+name: 'CreativeMessage',
   props: {
     msg: String
   },
   components: {
-    SliderElement
+    SliderElement,
+    facebookLogin,
   },
   data: function(){
     return{
       selected_template:'text',
+      idImage, loginImage, mailImage, faceImage,
+      isConnected: false, 
+      steps: 3,
       result:'json here',
+      selected_page:'',
+      pages:[],
       text_message:"",
+      name: '',
+      email: '',
+      personalID: '',
+      step:1,
+      loadingWizard:false,
+      FB:undefined,
       text_template:{    
         "messages":[
         {
@@ -95,7 +145,14 @@ export default {
           }              
         ]
       },
-      slider_result:[]
+      slider_result:[],
+        rules: {
+            selected_page: [{
+                required: true,
+                message: 'Please choose one of your pages',
+                trigger: 'change'
+            }], 
+        }
     }
   },
   watch: {
@@ -132,12 +189,125 @@ export default {
 
   },
   methods:{
-
+    checkIfUserHavePages()
+    {
+          return new Promise((resolve, reject) => {
+            if(this.pages.length == 0){
+                Swal({
+                    type: 'warning',
+                    title: 'Warning',
+                    text: 'You must have at least one page to use this application'
+                })
+            }
+            else{
+                resolve(true)
+            }   
+        })
+    },
+    setLoading: function(value) {
+        this.loadingWizard = value
+    },
+    checkIfSetPage()
+    {
+        if(this.selected_page)
+        {
+            return true;
+        }
+        else
+        {
+            Swal({
+                type: 'warning',
+                title: 'Warning',
+                text: 'You must choose one of your pages'
+            })
+            return false;
+        }
+    },
+    handleValidation: function(isValid, tabIndex){
+        console.log('Tab: '+tabIndex+ ' valid: '+isValid)
+    },
+    getUserData() {
+      var that = this;
+      this.FB.api('/me', 'GET', { fields: 'id,name,email' },
+        userInformation => {  
+          this.personalID = userInformation.id;
+          this.email = userInformation.email;
+          this.name = userInformation.name;
+        }
+      )
+      this.FB.api('/me/accounts',
+        function (response) {
+            if (response && !response.error) {
+                if(response.data)
+                {
+                  Swal({
+                    type: 'success',
+                    title: 'Facebook Login',
+                    text: 'You have successfully logged in into the facebook'
+                  })
+                  that.pages = response.data;
+                }
+            }
+        }
+    );
+    },
+    sendMessage()
+    {
+      var that = this;
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          var messageId = JSON.parse(this.responseText)
+          if(messageId.message_creative_id)
+          {
+            that.sendBroadcast(messageId.message_creative_id) 
+          }
+        }
+      };
+      xhttp.open("POST", 'https://graph.facebook.com/v2.11/me/message_creatives?access_token='+this.selected_page, true);
+      xhttp.setRequestHeader('Content-Type', 'application/json');
+      xhttp.send(this.text_output);
+    },
+    sendBroadcast(messageId)
+    {
+      var param = {    
+        "message_creative_id": messageId,
+        "notification_type": "REGULAR",
+        "messaging_type": "MESSAGE_TAG",
+        "tag": "NON_PROMOTIONAL_SUBSCRIPTION"
+      }
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+             Swal({
+                type: 'success',
+                title: 'Broadcast Message',
+                text: 'You have successfully broadcast your message'
+              })
+        }
+      };
+      xhttp.open("POST", 'https://graph.facebook.com/v2.11/me/broadcast_messages?access_token='+this.pages[0].access_token, true);
+      xhttp.setRequestHeader('Content-Type', 'application/json');
+      xhttp.send(JSON.stringify(param));
+    },
+    sdkLoaded(payload) {
+      this.isConnected = payload.isConnected
+      this.FB = payload.FB
+      if (this.isConnected) this.getUserData()
+    },
     addElement(){
 
     this.slider_result.push({});
 
     },
+    onLogin() {
+      this.isConnected = true
+      this.getUserData()
+    },
+    onLogout() {
+      this.isConnected = false;
+    },
+
     updateElement(index,value)
     {
       this.$set(this.slider_result, index, value)
