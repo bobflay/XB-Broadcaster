@@ -5,6 +5,7 @@
 </template>
 
 <script>
+const Swal = require('sweetalert2')
 import HelloWorld from './components/HelloWorld.vue'
 import CreativeMessage from './components/CreativeMessage.vue'
 
