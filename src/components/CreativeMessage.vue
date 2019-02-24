@@ -1,10 +1,10 @@
 <template>
     <div class="container">
-        <form-wizard  shape="tab" color="#364e92" @on-validate="handleValidation">
+        <form-wizard  shape="tab" color="#364e92">
             <h2 slot="title">Broadcaster</h2> 
             <tab-content title="Facebook Login" icon="ti-user" :before-change="checkIfUserHavePages">
                 <h1>Login To Facebook</h1>
-                <!-- set your public app Id her  -->
+                <!-- adding your app id here -->
                 <facebook-login class="button" appId="" @login="getUserData" @logout="onLogout" @sdk-loaded="sdkLoaded">
                 </facebook-login>
                 <img v-if="!isConnected" :src="loginImage" class="login">
@@ -23,22 +23,13 @@
                             <img :src="faceImage">
                             <i>{{personalID}}</i>
                         </div>
-                        <div class="list-item">
-                            <ul>
-                                <li v-for="(page,key) in this.pages" >
-                                    <span>Page{{key+1}}-{{page.name}}</span>
-                                </li>
-                            </ul>
-                        </div>
                     </div>
                 </div>
             </tab-content>
             <tab-content title="Pages" icon="ti-settings" :before-change="checkIfSetPage">
                 <div class="col-md-12" style="margin-bottom: 10%;">
                     <h1>Please choose One Of your Pages</h1>
-                    <select class="form-control" v-model="selected_page" placeholder="Activity zone">
-                        <option v-for="page in this.pages" :value="page.access_token">{{page.name}}</option>
-                    </select>
+                    <v-select label="name" v-model="selected_page" :options="options"></v-select>
                 </div>
             </tab-content>
             <tab-content title=" Broadcast Message" icon="ti-check">
@@ -68,7 +59,12 @@
                     </div>
                 </div>
             </tab-content>
+            <button slot="next" :disabled="!FB" type="button" class="wizard-btn" style="background-color: rgb(54, 78, 146); border-color: rgb(54, 78, 146); color: white;">
+                Next
+            </button>
+
             <button v-if="selected_template == 'text'" :disabled="!text_message" slot="finish" class="btn btn-success" @click="sendMessage()">Broadcast Message</button>
+
             <button v-else :disabled="this.slider_result.length == 0" slot="finish" class="btn btn-success" @click="sendMessage()">Broadcast Message</button>
         </form-wizard>
     </div>
@@ -100,6 +96,7 @@ name: 'CreativeMessage',
       result:'json here',
       selected_page:'',
       pages:[],
+      options:[],
       text_message:"",
       name: '',
       email: '',
@@ -156,6 +153,13 @@ name: 'CreativeMessage',
     }
   },
   watch: {
+    pages:function(val){
+        if(this.pages.length > 0){
+            this.pages.forEach((item,key)=>{
+                this.options.push({'name':item.name,'token':item.access_token});
+            });
+        }
+    },
     selected_template: function (value) {
       if(value == 'text')
       {
@@ -223,9 +227,6 @@ name: 'CreativeMessage',
             return false;
         }
     },
-    handleValidation: function(isValid, tabIndex){
-        console.log('Tab: '+tabIndex+ ' valid: '+isValid)
-    },
     getUserData() {
       var that = this;
       this.FB.api('/me', 'GET', { fields: 'id,name,email' },
@@ -264,7 +265,7 @@ name: 'CreativeMessage',
           }
         }
       };
-      xhttp.open("POST", 'https://graph.facebook.com/v2.11/me/message_creatives?access_token='+this.selected_page, true);
+      xhttp.open("POST", 'https://graph.facebook.com/v2.11/me/message_creatives?access_token='+this.selected_page.token, true);
       xhttp.setRequestHeader('Content-Type', 'application/json');
       xhttp.send(this.text_output);
     },
@@ -286,7 +287,7 @@ name: 'CreativeMessage',
               })
         }
       };
-      xhttp.open("POST", 'https://graph.facebook.com/v2.11/me/broadcast_messages?access_token='+this.pages[0].access_token, true);
+      xhttp.open("POST", 'https://graph.facebook.com/v2.11/me/broadcast_messages?access_token='+this.selected_page.token, true);
       xhttp.setRequestHeader('Content-Type', 'application/json');
       xhttp.send(JSON.stringify(param));
     },
